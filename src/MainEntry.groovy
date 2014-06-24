@@ -14,9 +14,20 @@ import groovy.text.GStringTemplateEngine;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import java.net.URLEncoder;
+
+import org.apache.commons.codec.binary.Base64;
 
 public class MainEntry {
 	
+	private static final char[] LOOKUPBASE64ALPHABET = new char[64];
 	public Set<PrintWriter> outputWriter = [ System.out ]
 
 	// usage: groovy URLConnector headers.properties http://www.url.com/params?q=value&s=othervalue
@@ -41,6 +52,15 @@ public class MainEntry {
 				}
 			}
 		}
+		
+		String szTime = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())
+		String szImei = "357945051088743"
+		String szSecurity = getSecurityHeader(args[1], szTime, szImei)
+		String szSecurityEncoded = URLEncoder.encode(szSecurity)
+		println( "security: ${szSecurity} => ${szSecurityEncoded}" )
+		headerMap.put( "security", szSecurityEncoded )
+		headerMap.put( "timestamp", szTime )
+		
 //		org.apache.http.headers.priority = "DEBUG"
 //		org.apache.http.wire.priority = "DEBUG"
 		java.util.logging.Logger.getLogger("org.apache.http.wire").setLevel(java.util.logging.Level.FINEST);
@@ -83,6 +103,23 @@ public class MainEntry {
 			}
 		}
 		outputWriter*.flush()
+	}
+	
+	public static String getSecurityHeader(String szUrl, String szDateTime, String szImei)
+	{
+//		String str1 = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+//		String str2 = "6281234567890";
+		String str1 = szDateTime;
+		String str2 = szImei;
+		StringBuffer localStringBuffer = new StringBuffer();
+		localStringBuffer.append(szUrl).append("Huawei_ODP").append("portalone").append(str1).append(str2);
+		return EncryptBase64(localStringBuffer.toString());
+	}
+	
+	public static String EncryptBase64(String paramString)
+	{
+			String str = Base64.encodeBase64String(MessageDigest.getInstance("SHA-256").digest(paramString.getBytes("UTF-8")));
+			return str;
 	}
 
 /* 	//public Set<PrintWriter> outputWriter = [ System.out ]
